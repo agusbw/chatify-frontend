@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import * as z from "zod";
-import { LoginSchema } from "@/lib/schema";
+import { loginSchema } from "@/lib/schema";
 
 export const Route = createFileRoute("/")({
   component: LoginPage,
@@ -41,8 +41,8 @@ function LoginPage() {
   const search = Route.useSearch();
   const auth = useAuth();
 
-  const form = useForm<z.infer<typeof LoginSchema>>({
-    resolver: zodResolver(LoginSchema),
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -55,7 +55,7 @@ function LoginPage() {
     }
   }, [auth.token, auth.user, router.history, search.redirect]);
 
-  async function onSubmit(data: z.infer<typeof LoginSchema>) {
+  async function onSubmit(data: z.infer<typeof loginSchema>) {
     const { username, password } = data;
     try {
       await auth.login(username, password);
