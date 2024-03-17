@@ -27,7 +27,25 @@ import { addRoom } from "@/lib/actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
-export default function CreateRoom({ className }: { className?: string }) {
+export default function CreateRoom({
+  className,
+  size,
+  children,
+  variant = "secondary",
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  size?: "sm" | "lg" | "icon" | undefined;
+  variant?:
+    | "link"
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | null
+    | undefined;
+}) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const form = useForm<CreateRoom>({
@@ -75,11 +93,12 @@ export default function CreateRoom({ className }: { className?: string }) {
     >
       <DialogTrigger asChild>
         <Button
-          variant="secondary"
+          variant={variant}
+          size={size}
           className={className}
           onClick={() => setOpen(true)}
         >
-          Create Room
+          {children || "Create Room"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

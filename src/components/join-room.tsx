@@ -26,7 +26,25 @@ import { joinRoom } from "@/lib/actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
-export default function JoinRoom({ className }: { className?: string }) {
+export default function JoinRoom({
+  className,
+  size,
+  children,
+  variant,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  size?: "sm" | "lg" | "icon" | undefined;
+  variant?:
+    | "link"
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | null
+    | undefined;
+}) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const form = useForm<JoinRoom>({
@@ -69,10 +87,12 @@ export default function JoinRoom({ className }: { className?: string }) {
     >
       <DialogTrigger asChild>
         <Button
+          size={size}
+          variant={variant}
           className={className}
           onClick={() => setOpen(true)}
         >
-          Join Room
+          {children || "Join Room"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
