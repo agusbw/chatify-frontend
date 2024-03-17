@@ -12,7 +12,12 @@ export const createRoomSchema = z.object({
 export const registerUserSchema = z
   .object({
     password: z.string().min(6, "Password must be at least 6 characters."),
-    username: z.string().min(2, "Username must be at least 2 characters."),
+    username: z
+      .string()
+      .min(2, "Username must be at least 2 characters.")
+      .refine((v) => {
+        return /^[a-z0-9_]+$/.test(v);
+      }, "Username can only contain lowercase letters, numbers, and underscores."),
     confirmPassword: z
       .string()
       .min(6, "Password must be at least 6 characters."),

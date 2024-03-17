@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: async ({ location, context }) => {
+    console.log(context.auth.token);
     const res = await fetch(
       `${import.meta.env.VITE_API_BASE_URL}/verify-token`,
       {

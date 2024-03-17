@@ -1,9 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { registerUserSchema } from "@/lib/schema";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
+import * as React from "react";
 import {
   Form,
   FormControl,
@@ -14,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { RegisterUser } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/register")({
@@ -30,8 +30,8 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
-  const { token } = useAuth();
-  const { history } = useRouter();
+  const auth = useAuth();
+  const router = useRouter();
   const form = useForm<RegisterUser>({
     resolver: zodResolver(registerUserSchema),
     defaultValues: {
@@ -41,13 +41,18 @@ function RegisterPage() {
     },
   });
 
+  React.useEffect(() => {
+    if (auth.token) {
+      router.history.push("/chats");
+    }
+  }, [auth.token, auth.user, router.history]);
+
   async function onSubmit(values: RegisterUser) {
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/register`, {
       method: "POST",
       body: JSON.stringify(values),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -62,8 +67,8 @@ function RegisterPage() {
     }
 
     toast.success("Account created successfully");
+    await auth.login(values.username, values.password);
     form.reset();
-    history.push("/");
   }
 
   return (

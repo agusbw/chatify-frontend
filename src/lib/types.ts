@@ -8,7 +8,7 @@ export type JoinRoom = z.infer<typeof joinRoomSchema>;
 export interface AuthContextType {
   token: string | null;
   user: UserAuthData | null;
-  login: (username: string, password: string) => void;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
