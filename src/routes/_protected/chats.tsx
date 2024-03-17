@@ -289,7 +289,7 @@ function RoomSection({
       className={`border-r h-full block relative transition-all duration-300 ${width}`}
     >
       <Button
-        className="absolute right-[-44px] top-1 rounded-full"
+        className="absolute right-[-44px] top-1 rounded-full z-50"
         size={"sm"}
         variant={"outline"}
         onClick={() => {
