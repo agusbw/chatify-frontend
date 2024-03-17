@@ -282,13 +282,11 @@ function RoomSection({
   const [isMobile, setIsMobile] = React.useState(responsive);
   const search = Route.useSearch();
 
-  const width = isMobile ? "70px" : "300px";
-
-  // if (isMobile) return null;
+  const width = isMobile ? "w-[70px]" : "w-[300px]";
 
   return (
     <div
-      className={`border-r h-full block relative w-[${width}] transition-all duration-300`}
+      className={`border-r h-full block relative transition-all duration-300 ${width}`}
     >
       <Button
         className="absolute right-[-44px] top-1 rounded-full"
