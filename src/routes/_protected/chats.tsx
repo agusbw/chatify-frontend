@@ -1,76 +1,181 @@
 import { createFileRoute } from "@tanstack/react-router";
+import * as React from "react";
 import { useAuth } from "@/components/auth-provider";
 import ChatBubble from "@/components/chat-bubble";
-import { fetcher } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, LogOut } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Send, LogOut, Loader2 } from "lucide-react";
+import { socket } from "@/lib/socket";
 import { Skeleton } from "@/components/ui/skeleton";
 import SignOut from "@/components/sign-out";
-import { Room } from "@/lib/types";
+import {
+  Room,
+  Message,
+  UserAuthData,
+  IncommingMessage,
+  ChatPageSearch,
+} from "@/lib/types";
 import CreateRoom from "@/components/create-room";
 import JoinRoom from "@/components/join-room";
 import { toast } from "sonner";
+import { useRooms, useRoomMessages } from "@/lib/hooks";
 
 export const Route = createFileRoute("/_protected/chats")({
   component: ChatsPage,
-  validateSearch: (
-    search: Record<string, unknown>
-  ): {
-    room?: number | null;
-  } => {
+  validateSearch: (search: Record<string, unknown>): ChatPageSearch => {
     return {
-      room: typeof search.room === "number" ? search.room : null,
+      room: Number(search.room),
     };
   },
 });
 
 function ChatsPage() {
   const { user, token } = useAuth();
+  const [message, setMessage] = React.useState("");
+  const [isConnected, setIsConnected] = React.useState(socket.connected);
+  const chatContainerRef = React.useRef<HTMLDivElement>(null);
+  const search = Route.useSearch();
+  const [messages, setMessages] = React.useState<Message[]>([]);
+  const { data: rooms, isLoading: isRoomsLoading } = useRooms(token);
+  const {
+    data: roomMessages,
+    isLoading: isMessagesLoading,
+    status: roomMessagesQueryStatus,
+  } = useRoomMessages(token, search.room);
 
-  const { data: rooms, isLoading: isRoomsLoading } = useQuery<Room[]>({
-    queryKey: ["rooms"],
-    queryFn: () => {
-      return fetcher("/rooms", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-    },
-  });
+  const getSelectedRoom = React.useCallback((): Room | null => {
+    if (!search.room || !rooms) {
+      return null;
+    }
+    return rooms.find((room) => room.id === search.room) || null;
+  }, [search.room, rooms]);
+
+  React.useEffect(() => {
+    if (roomMessagesQueryStatus === "success") {
+      setMessages(roomMessages || []);
+    }
+  }, [roomMessagesQueryStatus, roomMessages]);
+
+  React.useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  React.useEffect(() => {
+    socket.connect();
+
+    function onConnect() {
+      setIsConnected(true);
+    }
+    function onDisconnect() {
+      setIsConnected(false);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("messageNotSent", ({ messageId, error }) => {
+      toast.error("Failed to send message: " + error);
+      setMessages((prevMessages) =>
+        prevMessages.filter((msg) => msg.id !== messageId)
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("messageNotSent");
+    };
+  }, []);
+
+  React.useEffect(() => {
+    function onIncomingMessage(v: IncommingMessage) {
+      messages.find((msg) => msg.id === v.id)
+        ? null
+        : setMessages((prev: Message[]) => [...prev, v]);
+    }
+    socket.on("incomingMessage", onIncomingMessage);
+    return () => {
+      socket.off("incomingMessage");
+    };
+  }, [messages]);
+
+  function handleSentMessage() {
+    if (!user || !search.room) return null;
+    const newMessage = {
+      id: messages[messages.length - 1]?.id + 1 || 1,
+      messageText: message,
+      roomId: search.room,
+      room: {
+        name: getSelectedRoom()?.name || "",
+      },
+      sender: {
+        username: user.username,
+      },
+      senderId: user.id || 0,
+      sentAt: new Date(),
+    };
+
+    setMessages((prev: Message[]) => [...prev, newMessage]);
+
+    socket.emit("messageSent", newMessage);
+
+    setMessage("");
+  }
+
+  if (!user || !token) return null;
 
   return (
     <div className="flex flex-col h-screen max-h-screen border-t">
-      <div className="flex items-center p-4 border-b w-full">
-        <div className="flex items-center gap-4 w-full justify-between">
-          <div className="sm:flex items-center gap-2 hidden">
-            <Avatar className="size-12 border sm:block">
-              <AvatarFallback>{user?.username[0].toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="mr-5">
-              <div className="font-semibold">{user?.username}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-x-1 items-center">
-                <div className="rounded-full size-2 bg-green-500"></div>
-                Online
+      <div className="flex items-center p-4 border-b w-full justify-between">
+        <div className="sm:flex items-center gap-2 hidden">
+          <Avatar className="size-12 border sm:block">
+            <AvatarFallback>{user?.username[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="mr-5">
+            <div className="font-semibold">{user?.username}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-x-1 items-">
+              <div
+                className={cn(
+                  "rounded-full size-2",
+                  isConnected ? "bg-green-500" : "bg-red-500"
+                )}
+              ></div>
+              <div>
+                {isConnected ? (
+                  <p>Connect</p>
+                ) : (
+                  <p>
+                    Offline <br /> Reload or check your connection
+                  </p>
+                )}
               </div>
             </div>
           </div>
-          <div className="font-semibold text-center">
-            <p className="text-muted-foreground text-sm line-clamp-2 max-w-xs">
-              Fans Windah Chatroom
+        </div>
+        <div className="font-semibold text-center text-muted-foreground max-w-xs">
+          {getSelectedRoom()?.name ? (
+            <p className="text-xs line-clamp-2">
+              <span className="text-lg">Chatify</span>
+              <br />
+              {getSelectedRoom()?.name}
             </p>
-          </div>
-          <div className="">
-            <SignOut
-              variant="destructive"
-              size="sm"
-            >
-              <LogOut className="size-4" />
-            </SignOut>
-          </div>
+          ) : (
+            "Welcome to Chatify!"
+          )}
+        </div>
+        <div className="">
+          <SignOut
+            variant="destructive"
+            size="sm"
+          >
+            <LogOut className="size-4" />
+          </SignOut>
         </div>
       </div>
       <div className="flex-1 flex border-t h-[calc(100%-200px)]">
@@ -80,11 +185,9 @@ function ChatsPage() {
               <JoinRoom className="flex-1" />
               <CreateRoom className="flex-1" />
             </div>
-            <div className="w-full p-4 border-b">
-              <div className="font-semibold">Chat rooms</div>
-            </div>
+            <div className="font-semibold w-full border-b p-4">Chat rooms</div>
             <div className="flex-1 overflow-y-auto max-h-full flex flex-col justify-between gap-4">
-              <ul className="">
+              <ul>
                 {isRoomsLoading ? (
                   [1, 2, 3, 4].map((i) => (
                     <li
@@ -93,7 +196,7 @@ function ChatsPage() {
                     >
                       <div className="flex items-center gap-4">
                         <Skeleton className="size-12 border rounded-full" />
-                        <div className="">
+                        <div>
                           <Skeleton className="w-28 h-4" />
                           <Skeleton className="w-16 h-2 mt-2" />
                         </div>
@@ -106,7 +209,11 @@ function ChatsPage() {
                       rooms.map((room) => {
                         return (
                           <li
-                            className="flex items-center gap-4 border-y hover:bg-muted-foreground/10 transition-colors duration-300"
+                            className={cn(
+                              "flex items-center gap-4 border-y hover:bg-muted-foreground/10 transition-colors duration-300",
+                              search.room === room.id &&
+                                "bg-muted-foreground/10"
+                            )}
                             key={room.id}
                           >
                             <Link
@@ -120,7 +227,7 @@ function ChatsPage() {
                                     room.name[1].toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="">
+                              <div>
                                 <p className="font-medium truncate">
                                   {room.name}
                                 </p>
@@ -146,33 +253,76 @@ function ChatsPage() {
           </div>
         </div>
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto bg-gray-100 p-4 dark:bg-gray-800">
-              <div className="grid gap-4">
-                <ChatBubble
-                  message="Apa kabar kamu?"
-                  position="right"
-                  username="agus_bw"
-                />
-                <ChatBubble
-                  message="Baik, kamu gimana?"
-                  username="rara"
-                />
+          <div
+            ref={chatContainerRef}
+            className="flex-1  overflow-y-auto bg-gray-100 p-4 dark:bg-gray-800"
+          >
+            {isMessagesLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="size-8 animate-spin" />
               </div>
-            </div>
+            ) : (
+              <ChatSection
+                room={getSelectedRoom()}
+                messages={messages || []}
+                user={user}
+              />
+            )}
+          </div>
+          <div className="border-t flex items-center gap-x-2 p-2">
+            <Textarea
+              className="min-h-[40px] resize-none flex-1"
+              placeholder="Type a message..."
+              onChange={(e) => setMessage(e.target.value)}
+              value={message}
+            />
+            <Button
+              className="h-10"
+              disabled={
+                isMessagesLoading || message.trim() === "" || !search.room
+              }
+              onClick={() => handleSentMessage()}
+            >
+              <Send className="size-4 mr-2" />
+              Send
+            </Button>
           </div>
         </div>
       </div>
-      <div className="border-t flex items-center gap-x-2 p-2">
-        <Textarea
-          className="min-h-[40px] resize-none flex-1"
-          placeholder="Type a message..."
-        />
-        <Button className="h-10">
-          <Send className="size-4 mr-2" />
-          Send
-        </Button>
+    </div>
+  );
+}
+
+function ChatSection({
+  room,
+  messages,
+  user,
+}: {
+  room: Room | null;
+  messages: Message[];
+  user: UserAuthData;
+}) {
+  if (!room)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground text-xl">
+          Select a chat room to start chatting
+        </p>
       </div>
+    );
+
+  return (
+    <div className="grid gap-4 ">
+      {messages.map((message, i) => {
+        return (
+          <ChatBubble
+            key={i}
+            message={message.messageText}
+            username={message.sender.username}
+            position={message.senderId === user.id ? "right" : "left"}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { joinRoomSchema } from "@/lib/schema";
 import type { JoinRoom } from "@/lib/types";
+import { useAuth } from "./auth-provider";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { joinRoom } from "@/lib/actions";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ import { useState } from "react";
 
 export default function JoinRoom({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
+  const { token } = useAuth();
   const form = useForm<JoinRoom>({
     resolver: zodResolver(joinRoomSchema),
     defaultValues: {
@@ -35,7 +37,7 @@ export default function JoinRoom({ className }: { className?: string }) {
   });
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async (values: JoinRoom) => await joinRoom(values),
+    mutationFn: async (values: JoinRoom) => await joinRoom(values, token),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["rooms"],
