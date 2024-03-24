@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { socket } from "@/lib/socket";
 import SignOut from "@/components/sign-out";
 import {
   Room,
@@ -28,7 +27,12 @@ import {
 import CreateRoom from "@/components/create-room";
 import JoinRoom from "@/components/join-room";
 import { toast } from "sonner";
-import { useRooms, useRoomMessages, useResponsive } from "@/lib/hooks";
+import {
+  useRooms,
+  useRoomMessages,
+  useResponsive,
+  useSocket,
+} from "@/lib/hooks";
 
 export const Route = createFileRoute("/_protected/chats")({
   component: ChatsPage,
@@ -42,12 +46,12 @@ export const Route = createFileRoute("/_protected/chats")({
 function ChatsPage() {
   const { user, token } = useAuth();
   const [message, setMessage] = React.useState("");
-  const [isConnected, setIsConnected] = React.useState(socket.connected);
+  const [isConnected, setIsConnected] = React.useState(false);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const search = Route.useSearch();
   const [messages, setMessages] = React.useState<Message[]>([]);
   const roomsQuery = useRooms(token);
-
+  const socket = useSocket(token);
   const {
     data: roomMessages,
     isLoading: isMessagesLoading,
@@ -75,7 +79,7 @@ function ChatsPage() {
   }, [messages]);
 
   React.useEffect(() => {
-    socket.connect();
+    if (!socket) return;
 
     function onConnect() {
       setIsConnected(true);
@@ -86,6 +90,7 @@ function ChatsPage() {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+
     socket.on("messageNotSent", ({ messageId, error }) => {
       toast.error("Failed to send message: " + error);
       setMessages((prevMessages) =>
@@ -99,9 +104,10 @@ function ChatsPage() {
       socket.off("disconnect", onDisconnect);
       socket.off("messageNotSent");
     };
-  }, []);
+  }, [socket]);
 
   React.useEffect(() => {
+    if (!socket) return;
     function onIncomingMessage(v: IncommingMessage) {
       messages.find((msg) => msg.id === v.id)
         ? null
@@ -111,9 +117,10 @@ function ChatsPage() {
     return () => {
       socket.off("incomingMessage");
     };
-  }, [messages]);
+  }, [messages, socket]);
 
   function handleSentMessage() {
+    if (!socket) return null;
     if (!user || !search.room) return null;
     const newMessage = {
       id: messages[messages.length - 1]?.id + 1 || 1,
@@ -223,7 +230,6 @@ function ChatsPage() {
               Send
             </Button>
           </div>
-          R
         </div>
       </div>
     </div>

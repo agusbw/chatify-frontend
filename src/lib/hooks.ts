@@ -1,7 +1,32 @@
 import { fetcher } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Room, Message } from "./types";
+import { io } from "socket.io-client";
+import { Socket } from "socket.io-client";
+import { ClientToServerEvents, ServerToClientEvents } from "./types";
 import * as React from "react";
+
+export function useSocket(token: string | null) {
+  const [socket, setSocket] = React.useState<Socket<
+    ServerToClientEvents,
+    ClientToServerEvents
+  > | null>(null);
+
+  React.useEffect(() => {
+    if (token) {
+      const s = io(import.meta.env.VITE_SOCKET_URL as string, {
+        autoConnect: false,
+        extraHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      s.connect();
+      setSocket(s);
+    }
+  }, [token]);
+
+  return socket;
+}
 
 export function useRooms(token: string | null) {
   const query = useQuery<Room[]>({
