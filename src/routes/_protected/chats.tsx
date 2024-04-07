@@ -146,7 +146,7 @@ function ChatsPage() {
   if (!user || !token) return null;
 
   return (
-    <div className="flex flex-col h-screen max-h-screen border-t max-w-screen overflow-hidden">
+    <div className="flex flex-col h-[100svh] max-h-[100svh] border-t max-w-screen overflow-hidden">
       <div className="flex items-center p-4 border-b w-full justify-between">
         <div className="flex items-center gap-2">
           <Avatar className="size-12 border hidden sm:block">
