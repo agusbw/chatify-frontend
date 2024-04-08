@@ -74,7 +74,8 @@ function ChatsPage() {
   React.useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight + 300;
+        chatContainerRef.current.scrollHeight -
+        chatContainerRef.current.clientHeight;
     }
   }, [messages]);
 

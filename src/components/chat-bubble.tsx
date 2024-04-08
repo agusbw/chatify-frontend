@@ -13,7 +13,7 @@ export default function ChatBubble({
     return (
       <div className="flex justify-end relative">
         <div className="rounded-lg px-4 py-2 bg-gray-200 dark:bg-gray-900 max-w-[85%]">
-          {message}
+          <p className="whitespace-pre-line">{message}</p>
         </div>
         <div className="w-0 border-t-[6px] border-t-gray-200 border-l-transparent border-r-transparent border-l-[6px] border-r-[6px] -rotate-90 absolute -right-[8.5px] top-[50%] -translate-y-[50%]"></div>
       </div>
@@ -34,7 +34,7 @@ export default function ChatBubble({
       </div>
       <div className="rounded-lg px-4 py-2 bg-gray-200 dark:bg-gray-900 max-w-[85%]">
         <p className="text-sm font-semibold">{username}</p>
-        <p>{message}</p>
+        <p className="whitespace-pre-line">{message}</p>
       </div>
       <div></div>
     </div>
