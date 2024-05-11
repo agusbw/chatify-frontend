@@ -5,6 +5,20 @@ export const loginSchema = z.object({
   password: z.string().min(1, ""),
 });
 
+export const sendMessage = z.object({
+  messageText: z.string().min(1),
+  room: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
+  sender: z.object({
+    id: z.number(),
+    username: z.string(),
+  }),
+  id: z.string(),
+  sentAt: z.coerce.date(),
+});
+
 export const createRoomSchema = z.object({
   name: z.string().min(1, "Chat room name is required."),
 });

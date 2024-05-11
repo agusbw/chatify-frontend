@@ -1,4 +1,9 @@
-import { createRoomSchema, registerUserSchema, joinRoomSchema } from "./schema";
+import {
+  createRoomSchema,
+  registerUserSchema,
+  joinRoomSchema,
+  sendMessage,
+} from "./schema";
 import * as z from "zod";
 
 export type CreateRoom = z.infer<typeof createRoomSchema>;
@@ -29,40 +34,13 @@ export type Room = {
   creatorId: number;
 };
 
-export type Message = {
-  id: number;
-  messageText: string;
-  sentAt: Date;
-  roomId: number;
-  senderId: number;
-  sender: {
-    username: string;
-  };
-  room: {
-    name: string;
-  };
-};
-
-export type IncommingMessage = {
-  id: number;
-  messageText: string;
-  roomId: number;
-  room: {
-    name: string;
-  };
-  sender: {
-    username: string;
-  };
-  senderId: number;
-  sentAt: Date;
-  connectionId?: string;
-};
+export type Message = z.infer<typeof sendMessage>;
 
 export interface ServerToClientEvents {
-  incomingMessage: (message: IncommingMessage) => void;
-  messageNotSent: (error: { error: string; messageId: number }) => void;
+  successSendMessage: (message: Message) => void;
+  errorSendMessage: (error: { error: string; messageId: string }) => void;
 }
 
 export interface ClientToServerEvents {
-  messageSent: (message: IncommingMessage) => void;
+  sendMessage: (message: Message) => void;
 }

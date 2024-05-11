@@ -7,6 +7,7 @@ import { Link } from "@tanstack/react-router";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { v4 as uuidv4 } from "uuid";
 import {
   Send,
   LogOut,
@@ -17,13 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import SignOut from "@/components/sign-out";
-import {
-  Room,
-  Message,
-  UserAuthData,
-  IncommingMessage,
-  ChatPageSearch,
-} from "@/lib/types";
+import { Room, Message, UserAuthData, ChatPageSearch } from "@/lib/types";
 import CreateRoom from "@/components/create-room";
 import JoinRoom from "@/components/join-room";
 import { toast } from "sonner";
@@ -33,6 +28,7 @@ import {
   useResponsive,
   useSocket,
 } from "@/lib/hooks";
+import { sendMessage } from "@/lib/schema";
 
 export const Route = createFileRoute("/_protected/chats")({
   component: ChatsPage,
@@ -92,7 +88,7 @@ function ChatsPage() {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
 
-    socket.on("messageNotSent", ({ messageId, error }) => {
+    socket.on("errorSendMessage", ({ messageId, error }) => {
       toast.error("Failed to send message: " + error);
       setMessages((prevMessages) =>
         prevMessages.filter((msg) => msg.id !== messageId)
@@ -103,44 +99,51 @@ function ChatsPage() {
       socket.disconnect();
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("messageNotSent");
+      socket.off("errorSendMessage");
     };
   }, [socket]);
 
   React.useEffect(() => {
     if (!socket) return;
-    function onIncomingMessage(v: IncommingMessage) {
+    function onSuccessSendMessage(v: Message) {
       messages.find((msg) => msg.id === v.id)
         ? null
         : setMessages((prev: Message[]) => [...prev, v]);
     }
-    socket.on("incomingMessage", onIncomingMessage);
+    socket.on("successSendMessage", onSuccessSendMessage);
     return () => {
-      socket.off("incomingMessage");
+      socket.off("successSendMessage");
     };
   }, [messages, socket]);
 
   function handleSentMessage() {
+    const selectedRoom = getSelectedRoom();
     if (!socket) return null;
-    if (!user || !search.room) return null;
-    const newMessage = {
-      id: messages[messages.length - 1]?.id + 1 || 1,
+    if (!user || !selectedRoom) return null;
+
+    const payload: Message = {
       messageText: message,
-      roomId: search.room,
       room: {
-        name: getSelectedRoom()?.name || "",
+        id: selectedRoom.id,
+        name: selectedRoom.name,
       },
       sender: {
+        id: user.id || 0,
         username: user.username,
       },
-      senderId: user.id || 0,
+      id: uuidv4(),
       sentAt: new Date(),
     };
 
-    setMessages((prev: Message[]) => [...prev, newMessage]);
+    const result = sendMessage.safeParse(payload);
+    if (!result.success) {
+      toast.error("Failed to send message");
+      return;
+    }
 
-    socket.emit("messageSent", newMessage);
-
+    const data = result.data;
+    setMessages((prev) => [...prev, data]);
+    socket.emit("sendMessage", data);
     setMessage("");
   }
 
@@ -272,7 +275,7 @@ function ChatSection({
             key={i}
             message={message.messageText}
             username={message.sender.username}
-            position={message.senderId === user.id ? "right" : "left"}
+            position={message.sender.id === user.id ? "right" : "left"}
           />
         );
       })}
