@@ -14,7 +14,8 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as RegisterImport } from './routes/register'
 import { Route as ProtectedImport } from './routes/_protected'
 import { Route as IndexImport } from './routes/index'
-import { Route as ProtectedChatsImport } from './routes/_protected/chats'
+import { Route as ProtectedLayoutImport } from './routes/_protected/_layout'
+import { Route as ProtectedLayoutChatsImport } from './routes/_protected/_layout.chats'
 
 // Create/Update Routes
 
@@ -33,9 +34,14 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const ProtectedChatsRoute = ProtectedChatsImport.update({
-  path: '/chats',
+const ProtectedLayoutRoute = ProtectedLayoutImport.update({
+  id: '/_layout',
   getParentRoute: () => ProtectedRoute,
+} as any)
+
+const ProtectedLayoutChatsRoute = ProtectedLayoutChatsImport.update({
+  path: '/chats',
+  getParentRoute: () => ProtectedLayoutRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -54,9 +60,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterImport
       parentRoute: typeof rootRoute
     }
-    '/_protected/chats': {
-      preLoaderRoute: typeof ProtectedChatsImport
+    '/_protected/_layout': {
+      preLoaderRoute: typeof ProtectedLayoutImport
       parentRoute: typeof ProtectedImport
+    }
+    '/_protected/_layout/chats': {
+      preLoaderRoute: typeof ProtectedLayoutChatsImport
+      parentRoute: typeof ProtectedLayoutImport
     }
   }
 }
@@ -65,7 +75,9 @@ declare module '@tanstack/react-router' {
 
 export const routeTree = rootRoute.addChildren([
   IndexRoute,
-  ProtectedRoute.addChildren([ProtectedChatsRoute]),
+  ProtectedRoute.addChildren([
+    ProtectedLayoutRoute.addChildren([ProtectedLayoutChatsRoute]),
+  ]),
   RegisterRoute,
 ])
 

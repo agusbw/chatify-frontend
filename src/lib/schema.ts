@@ -5,8 +5,8 @@ export const loginSchema = z.object({
   password: z.string().min(1, ""),
 });
 
-export const sendMessage = z.object({
-  messageText: z.string().min(1),
+export const sendMessageSchema = z.object({
+  messageText: z.string().trim().min(1),
   room: z.object({
     id: z.number(),
     name: z.string(),
@@ -19,8 +19,38 @@ export const sendMessage = z.object({
   sentAt: z.coerce.date(),
 });
 
+export const roomSchema = z.object({
+  id: z.number(),
+  code: z.string(),
+  name: z.string(),
+  createdAt: z.coerce.date(),
+  creatorId: z.number(),
+});
+
+export const roomDetailSchema = z.object({
+  id: z.number(),
+  createdAt: z.coerce.date(),
+  name: z.string(),
+  code: z.string(),
+  creatorId: z.number(),
+  usersToRooms: z.array(
+    z.object({
+      joinedAt: z.coerce.date(),
+      user: z.object({
+        id: z.number(),
+        username: z.string(),
+      }),
+      room: z.object({
+        creatorId: z.number(),
+        id: z.number(),
+        name: z.string(),
+      }),
+    })
+  ),
+});
+
 export const createRoomSchema = z.object({
-  name: z.string().min(1, "Chat room name is required."),
+  name: z.string().trim().min(1, "Chat room name is required."),
 });
 
 export const registerUserSchema = z

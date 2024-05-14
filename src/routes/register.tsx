@@ -4,7 +4,6 @@ import { registerUserSchema } from "@/lib/schema";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
-import * as React from "react";
 import {
   Form,
   FormControl,
@@ -41,12 +40,6 @@ function RegisterPage() {
     },
   });
 
-  React.useEffect(() => {
-    if (auth.token) {
-      router.history.push("/chats");
-    }
-  }, [auth.token, auth.user, router.history]);
-
   async function onSubmit(values: RegisterUser) {
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/register`, {
       method: "POST",
@@ -69,6 +62,10 @@ function RegisterPage() {
     toast.success("Account created successfully");
     await auth.login(values.username, values.password);
     form.reset();
+  }
+
+  if (auth.token) {
+    router.history.push("/chats");
   }
 
   return (

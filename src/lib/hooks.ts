@@ -1,16 +1,20 @@
 import { fetcher } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { Room, Message } from "./types";
 import { io } from "socket.io-client";
 import { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "./types";
 import * as React from "react";
+import { roomDetailSchema, roomSchema, sendMessageSchema } from "./schema";
+import { z } from "zod";
+import { useAuth } from "@/components/auth-provider";
 
-export function useSocket(token: string | null) {
+export function useSocket() {
+  const { token } = useAuth();
   const [socket, setSocket] = React.useState<Socket<
     ServerToClientEvents,
     ClientToServerEvents
   > | null>(null);
+  const [isConnected, setIsConnected] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (token) {
@@ -25,40 +29,81 @@ export function useSocket(token: string | null) {
     }
   }, [token]);
 
-  return socket;
+  React.useEffect(() => {
+    if (!socket) return;
+
+    function onConnect() {
+      setIsConnected(true);
+    }
+    function onDisconnect() {
+      setIsConnected(false);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    return () => {
+      socket.disconnect();
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("errorSendMessage");
+    };
+  }, [socket]);
+
+  return { socket: socket, isConnected: isConnected };
 }
 
-export function useRooms(token: string | null) {
-  const query = useQuery<Room[]>({
-    queryKey: ["rooms"],
-    queryFn: () => {
-      return fetcher("/rooms", {
+export function useRoom(roomId: number | null) {
+  const { token } = useAuth();
+  const query = useQuery({
+    queryKey: ["room", roomId],
+    queryFn: async () => {
+      const res = await fetcher(`/rooms/${roomId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      return roomDetailSchema.parse(res);
     },
   });
 
   return query;
 }
 
-export function useRoomMessages(
-  token: string | null,
-  roomId: number | undefined
-) {
-  const query = useQuery<Message[]>({
-    queryKey: ["rooms", roomId],
-    queryFn: () => {
-      return fetcher(`/rooms/${roomId}/messages`, {
+export function useRooms() {
+  const { token } = useAuth();
+  const query = useQuery({
+    queryKey: ["room", "rooms"],
+    queryFn: async () => {
+      const res = await fetcher("/rooms", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      return z.array(roomSchema).parse(res);
     },
-    enabled: Boolean(roomId),
   });
 
+  return query;
+}
+
+export function useRoomMessages(roomId: number | null) {
+  const { token } = useAuth();
+  const query = useQuery({
+    queryKey: ["rooms", roomId],
+    queryFn: async () => {
+      const res = await fetcher(`/rooms/${roomId}/messages`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return z.array(sendMessageSchema).parse(res);
+    },
+    enabled: Boolean(roomId),
+    retry: 1,
+  });
   return query;
 }
 

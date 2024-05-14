@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function getInitialName(name: string): string {
+  const nameArr = name.trim().split(/\s+/);
+  let initialName = "";
+  if (nameArr.length > 1) {
+    for (let i = 0; i < Math.min(nameArr.length, 3); i++) {
+      initialName += nameArr[i][0];
+    }
+  } else {
+    initialName = nameArr[0].slice(0, 2);
+  }
+  return initialName.toUpperCase();
+}
+
 export async function fetcher<T>(
   endpoint: string,
   options?: RequestInit
@@ -18,7 +31,10 @@ export async function fetcher<T>(
   });
 
   if (!res.ok) {
-    throw new Error("An error occurred while fetching the data.");
+    if (res.status === 403 || res.status === 401) {
+      throw new Error("You dont have access to this data");
+    }
+    throw new Error("An error occurs when fetching data");
   }
 
   return res.json();

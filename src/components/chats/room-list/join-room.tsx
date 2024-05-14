@@ -14,24 +14,23 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { createRoomSchema } from "@/lib/schema";
-import type { CreateRoom } from "@/lib/types";
-import { useAuth } from "./auth-provider";
+import { joinRoomSchema } from "@/lib/schema";
+import type { JoinRoom } from "@/lib/types";
+import { useAuth } from "../../auth-provider";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addRoom } from "@/lib/actions";
+import { joinRoom } from "@/lib/actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
-export default function CreateRoom({
+export default function JoinRoom({
   className,
   size,
   children,
-  variant = "secondary",
+  variant,
 }: {
   className?: string;
   children?: React.ReactNode;
@@ -48,37 +47,32 @@ export default function CreateRoom({
 }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
-  const form = useForm<CreateRoom>({
-    resolver: zodResolver(createRoomSchema),
+  const form = useForm<JoinRoom>({
+    resolver: zodResolver(joinRoomSchema),
     defaultValues: {
-      name: "",
+      code: "",
     },
   });
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async (values: CreateRoom) => await addRoom(values, token),
+    mutationFn: async (values: JoinRoom) => await joinRoom(values, token),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["rooms"],
+        queryKey: ["room"],
       });
     },
   });
 
-  async function onSubmit(values: CreateRoom) {
+  async function onSubmit(values: JoinRoom) {
     const res = await mutation.mutateAsync(values);
-    if (res.status === 400) {
-      toast.error("Room name is already taken");
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error);
       return;
     }
-    const data = await res.json();
-    toast(
-      <div>
-        <p className="font-medium">Room created succesfully</p>
-        <p>Code: {data.code}</p>
-      </div>
-    );
-    setOpen(false);
+    toast("Entering the room, happy chatting!");
     form.reset();
+    setOpen(false);
   }
 
   return (
@@ -93,41 +87,37 @@ export default function CreateRoom({
     >
       <DialogTrigger asChild>
         <Button
-          variant={variant}
           size={size}
+          variant={variant}
           className={className}
           onClick={() => setOpen(true)}
         >
-          {children || "Create Room"}
+          {children || "Join Room"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>Create Room</DialogTitle>
+              <DialogTitle>Join Room</DialogTitle>
               <DialogDescription>
-                Create a new chat room and invite others to join.
+                Enter a room code to join the chat room
               </DialogDescription>
             </DialogHeader>
 
             <FormField
               control={form.control}
-              name="name"
+              name="code"
               render={({ field }) => (
-                <FormItem>
-                  <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2 my-4">
-                    <FormLabel>Room Name</FormLabel>
-                    <FormControl className="col-span-3">
-                      <Input
-                        placeholder="Enter a room name"
-                        autoComplete="off"
-                        {...field}
-                      />
-                    </FormControl>
-                    <div></div>
-                    <FormMessage className="col-span-3" />
-                  </div>
+                <FormItem className="my-4">
+                  <FormControl>
+                    <Input
+                      placeholder="Enter a room code"
+                      autoComplete="off"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -136,7 +126,7 @@ export default function CreateRoom({
                 type="submit"
                 disabled={form.formState.isSubmitting}
               >
-                Create
+                Join
               </Button>
             </DialogFooter>
           </form>

@@ -5,7 +5,6 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth-provider";
@@ -49,12 +48,6 @@ function LoginPage() {
     },
   });
 
-  useEffect(() => {
-    if (auth.token) {
-      router.history.push(search.redirect ? search.redirect : "/chats");
-    }
-  }, [auth.token, auth.user, router.history, search.redirect]);
-
   async function onSubmit(data: z.infer<typeof loginSchema>) {
     const { username, password } = data;
     try {
@@ -66,6 +59,10 @@ function LoginPage() {
         toast.error(err.message);
       }
     }
+  }
+
+  if (auth.token) {
+    router.history.push(search.redirect ? search.redirect : "/chats");
   }
 
   return (

@@ -2,7 +2,8 @@ import {
   createRoomSchema,
   registerUserSchema,
   joinRoomSchema,
-  sendMessage,
+  sendMessageSchema,
+  roomSchema,
 } from "./schema";
 import * as z from "zod";
 
@@ -17,24 +18,18 @@ export interface AuthContextType {
   logout: () => void;
 }
 
-export type ChatPageSearch = {
-  room?: number;
-};
+export interface SettingModeContextType {
+  settingMode: boolean;
+  setSettingMode: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
 export interface UserAuthData {
   id: number;
   username: string;
 }
 
-export type Room = {
-  code: string;
-  id: number;
-  name: string;
-  createdAt: Date;
-  creatorId: number;
-};
-
-export type Message = z.infer<typeof sendMessage>;
+export type Room = z.infer<typeof roomSchema>;
+export type Message = z.infer<typeof sendMessageSchema>;
 
 export interface ServerToClientEvents {
   successSendMessage: (message: Message) => void;
