@@ -23,6 +23,9 @@ export const Route = createFileRoute("/register")({
       throw redirect({
         to: "/chats",
         replace: true,
+        search: {
+          room: null,
+        },
       });
     }
   },
