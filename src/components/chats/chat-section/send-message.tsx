@@ -11,13 +11,16 @@ import { v4 as uuidv4 } from "uuid";
 import { sendMessageSchema } from "@/lib/schema";
 import { Send } from "lucide-react";
 import { Button } from "../../ui/button";
+import { scrollToEndElement } from "@/lib/utils";
 
 function SendMessage({
   handleMessagesChange,
   messages,
+  chatContainerRef,
 }: {
   handleMessagesChange: React.Dispatch<React.SetStateAction<Message[]>>;
   messages: Message[];
+  chatContainerRef: React.RefObject<HTMLDivElement>;
 }) {
   const [message, setMessage] = useState("");
   const { user } = useAuth();
@@ -43,6 +46,9 @@ function SendMessage({
               sentAt: new Date(v.sentAt),
             },
           ]);
+      if (v.sender.id === user?.id) {
+        scrollToEndElement(chatContainerRef);
+      }
     }
 
     function onErrorSendMessage({
