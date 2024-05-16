@@ -12,7 +12,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RegisterUser } from "@/lib/types";
+import { type RegisterUser } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 

@@ -18,6 +18,10 @@ export const sendMessageSchema = z.object({
   id: z.string(),
   sentAt: z.coerce.date(),
 });
+export const kickMemberSchema = z.object({
+  roomId: z.coerce.number(),
+  memberId: z.coerce.number(),
+});
 
 export const roomSchema = z.object({
   id: z.number(),

@@ -1,14 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import * as React from "react";
 import RoomSection from "@/components/chats/room-list/room-section";
 import { useRoomMessages } from "@/lib/hooks";
-import type { Message } from "@/lib/types";
+import type { KickMember, Message, SuccessDeleteRoom } from "@/lib/types";
 import ChatSection from "@/components/chats/chat-section/chat-section";
 import SendMessage from "@/components/chats/chat-section/send-message";
 import { toast } from "sonner";
 import { z } from "zod";
 import RoomSetting from "@/components/chats/room-settings/room-setting";
 import { useSettingMode } from "@/components/setting-mode-provider";
+import { useSocket } from "@/components/socket-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth-provider";
 
 export const Route = createFileRoute("/_protected/_layout/chats")({
   component: ChatsPage,
@@ -20,11 +23,16 @@ export const Route = createFileRoute("/_protected/_layout/chats")({
 });
 
 function ChatsPage() {
+  const { user } = useAuth();
   const search = Route.useSearch();
+  const queryClient = useQueryClient();
+  const router = useRouter();
   const messagesQuery = useRoomMessages(search.room);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
-  const { settingMode } = useSettingMode();
+  const { socket } = useSocket();
+  const { settingMode, setSettingMode } = useSettingMode();
+  console.log(search.room);
 
   React.useEffect(() => {
     if (messagesQuery.status === "success") {
@@ -34,6 +42,44 @@ function ChatsPage() {
       toast.error(`${messagesQuery.error.message}`);
     }
   }, [messagesQuery.status, messagesQuery.data, messagesQuery.error]);
+
+  React.useEffect(() => {
+    if (!socket) return;
+    function onMemberKicked(data: KickMember) {
+      if (data.memberId === user?.id) {
+        if (search.room === data.roomId) {
+          router.history.push("/chats?room=null");
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["room"] });
+    }
+
+    function onSuccessDeleteRoom(data: SuccessDeleteRoom) {
+      if (data.deletedBy !== user?.id) {
+        if (search.room === data.deletedRoom) {
+          toast.error("This room has been deleted by the creator");
+          router.history.push("/chats?room=null");
+          if (settingMode) setSettingMode(false);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["room"] });
+    }
+
+    socket.on("memberKicked", onMemberKicked);
+    socket.on("successDeleteRoom", onSuccessDeleteRoom);
+
+    return () => {
+      socket.off("memberKicked", onMemberKicked);
+    };
+  }, [
+    queryClient,
+    socket,
+    router.history,
+    search.room,
+    user?.id,
+    setSettingMode,
+    settingMode,
+  ]);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {

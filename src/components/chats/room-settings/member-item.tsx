@@ -2,10 +2,15 @@ import { XIcon } from "lucide-react";
 import { AvatarFallback, Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getInitialName } from "@/lib/utils";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { kickMember } from "@/lib/actions";
+import * as React from "react";
 import { useAuth } from "@/components/auth-provider";
 import { toast } from "sonner";
+import { useSocket } from "@/components/socket-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSettingMode } from "@/components/setting-mode-provider";
+import { type KickMember } from "@/lib/types";
+import { useRouter } from "@tanstack/react-router";
+import { Route } from "@/routes/_protected/_layout.chats";
 
 type MemberItemProps = {
   data: {
@@ -23,27 +28,56 @@ type MemberItemProps = {
 
 function MemberItem({ data }: MemberItemProps) {
   const { room, member } = data;
-  const { token, user } = useAuth();
+  const { user } = useAuth();
+  const { socket } = useSocket();
+  const search = Route.useSearch();
+  const router = useRouter();
+  const [loading, setLoading] = React.useState(false);
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async () => await kickMember(token, room.id, member.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["room"],
-      });
-    },
-  });
+  const { setSettingMode } = useSettingMode();
+
+  React.useEffect(() => {
+    if (!socket) return;
+
+    function onMemberKicked(data: KickMember) {
+      console.log("Received memberKicked event:", data.memberId, user?.id);
+      if (data.memberId !== user?.id) {
+        toast.success("Yashhh you kicked him/her in the ass 🦶🏻");
+      }
+      queryClient.invalidateQueries({ queryKey: ["room"] });
+      setLoading(false);
+    }
+
+    function onErrorKickMember(data: { error: string }) {
+      toast.error("Failed to kick member: " + data.error);
+      setLoading(false);
+    }
+
+    socket.on("memberKicked", onMemberKicked);
+    socket.on("errorKickMember", onErrorKickMember);
+
+    return () => {
+      socket.off("memberKicked", onMemberKicked);
+      socket.off("errorKickMember", onErrorKickMember);
+    };
+  }, [
+    socket,
+    queryClient,
+    router.history,
+    setSettingMode,
+    search.room,
+    user?.id,
+  ]);
 
   async function handleKickMember() {
     const doAction = confirm(`Kick ${member.username} from the room?`);
     if (!doAction) return;
-    const res = await mutation.mutateAsync();
-    const msg = await res.json();
-    if (!res.ok) {
-      toast.error(msg.error);
-      return;
-    }
-    toast(`${member.username} kicked 🦶🏻!`);
+
+    socket?.emit("kickMember", {
+      roomId: room.id,
+      memberId: member.id,
+    });
+    setLoading(true);
   }
 
   return (
@@ -69,7 +103,7 @@ function MemberItem({ data }: MemberItemProps) {
           className="flex items-center"
           size="icon"
           variant="ghost"
-          disabled={mutation.isPending}
+          disabled={loading}
           onClick={handleKickMember}
         >
           <XIcon className="h-4 w-4 hover:text-destructive transition-colors" />

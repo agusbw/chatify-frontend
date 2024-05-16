@@ -11,6 +11,7 @@ import {
   SettingModeProvider,
   useSettingMode,
 } from "./components/setting-mode-provider";
+import { SocketProvider, useSocket } from "./components/socket-provider";
 
 // Create a new router instance
 const router = createRouter({
@@ -18,6 +19,7 @@ const router = createRouter({
   context: {
     auth: undefined!,
     settingMode: undefined!,
+    socket: undefined!,
   },
 });
 const queryClient = new QueryClient();
@@ -31,10 +33,11 @@ declare module "@tanstack/react-router" {
 function InnerApp() {
   const auth = useAuth();
   const settingMode = useSettingMode();
+  const socket = useSocket();
   return (
     <RouterProvider
       router={router}
-      context={{ auth, settingMode }}
+      context={{ auth, settingMode, socket }}
     />
   );
 }
@@ -46,13 +49,15 @@ if (!rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <AuthProvider>
-        <SettingModeProvider>
-          <QueryClientProvider client={queryClient}>
-            <Suspense fallback={<div>Loading...</div>}>
-              <InnerApp />
-            </Suspense>
-          </QueryClientProvider>
-        </SettingModeProvider>
+        <SocketProvider>
+          <SettingModeProvider>
+            <QueryClientProvider client={queryClient}>
+              <Suspense fallback={<div>Loading...</div>}>
+                <InnerApp />
+              </Suspense>
+            </QueryClientProvider>
+          </SettingModeProvider>
+        </SocketProvider>
       </AuthProvider>
     </StrictMode>
   );

@@ -2,7 +2,7 @@ import { useAuth } from "../../auth-provider";
 import { Route } from "@/routes/_protected/_layout.chats";
 import ChatBubble from "./chat-bubble";
 import { Loader2 } from "lucide-react";
-import { Message } from "@/lib/types";
+import { type Message } from "@/lib/types";
 import { Navigate } from "@tanstack/react-router";
 
 function ChatSection({

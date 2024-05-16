@@ -20,12 +20,18 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { createRoomSchema } from "@/lib/schema";
-import type { CreateRoom } from "@/lib/types";
-import { useAuth } from "../../auth-provider";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addRoom } from "@/lib/actions";
+import type {
+  CreateRoom,
+  SocketResponseError,
+  SuccessCreateRoom,
+} from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useSocket } from "@/components/socket-provider";
+import { useRouter } from "@tanstack/react-router";
+import { useSettingMode } from "@/components/setting-mode-provider";
 
 export default function CreateRoom({
   className,
@@ -47,7 +53,10 @@ export default function CreateRoom({
     | undefined;
 }) {
   const [open, setOpen] = useState(false);
-  const { token } = useAuth();
+  const { socket } = useSocket();
+  const router = useRouter();
+  const { setSettingMode } = useSettingMode();
+  const [loading, setLoading] = React.useState(false);
   const form = useForm<CreateRoom>({
     resolver: zodResolver(createRoomSchema),
     defaultValues: {
@@ -55,32 +64,43 @@ export default function CreateRoom({
     },
   });
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async (values: CreateRoom) => await addRoom(values, token),
-    onSuccess: () => {
+
+  React.useEffect(() => {
+    if (!socket) return;
+
+    function onSuccessCreateRoom(data: SuccessCreateRoom) {
+      setLoading(false);
+      console.log("room created");
+      toast.success(`Create room successfully!`);
+      router.history.push(`/chats?room=${data.roomId}`);
       queryClient.invalidateQueries({
         queryKey: ["room"],
       });
-    },
-  });
+      form.reset();
+      setSettingMode(false);
+    }
+
+    function onErrorCreateRoom(data: SocketResponseError) {
+      setLoading(false);
+      toast(data.error);
+    }
+
+    socket.on("successCreateRoom", onSuccessCreateRoom);
+    socket.on("errorCreateRoom", onErrorCreateRoom);
+
+    return () => {
+      socket.off("successCreateRoom");
+      socket.off("errorCreateRoom");
+    };
+  }, [socket, queryClient, router.history, setSettingMode, form]);
 
   async function onSubmit(values: CreateRoom) {
-    const res = await mutation.mutateAsync({
-      name: values.name.trim(),
+    if (!socket) return;
+    setLoading(true);
+    socket.emit("createRoom", {
+      name: values.name,
     });
-    if (res.status === 400) {
-      toast.error("Room name is already taken");
-      return;
-    }
-    const data = await res.json();
-    toast.success(
-      <div>
-        <p className="font-medium">Room created succesfully</p>
-        <p>Code: {data.code}</p>
-      </div>
-    );
     setOpen(false);
-    form.reset();
   }
 
   return (
@@ -136,7 +156,7 @@ export default function CreateRoom({
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={form.formState.isSubmitting}
+                disabled={loading}
               >
                 Create
               </Button>

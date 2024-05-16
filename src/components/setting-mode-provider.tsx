@@ -1,5 +1,5 @@
 import React, { createContext, useState, ReactNode, useContext } from "react";
-import { SettingModeContextType } from "@/lib/types";
+import { type SettingModeContextType } from "@/lib/types";
 
 const SettingModeContext = createContext<SettingModeContextType | undefined>(
   undefined

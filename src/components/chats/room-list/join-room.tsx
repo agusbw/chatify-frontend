@@ -19,12 +19,17 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { joinRoomSchema } from "@/lib/schema";
-import type { JoinRoom } from "@/lib/types";
-import { useAuth } from "../../auth-provider";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { joinRoom } from "@/lib/actions";
+import {
+  type JoinRoom as JoinRoomType,
+  type SocketResponseError,
+} from "@/lib/types";
+import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useSocket } from "@/components/socket-provider";
+import { useRouter } from "@tanstack/react-router";
+import { useSettingMode } from "@/components/setting-mode-provider";
 
 export default function JoinRoom({
   className,
@@ -46,32 +51,51 @@ export default function JoinRoom({
     | undefined;
 }) {
   const [open, setOpen] = useState(false);
-  const { token } = useAuth();
-  const form = useForm<JoinRoom>({
+  const { socket } = useSocket();
+  const router = useRouter();
+  const { setSettingMode } = useSettingMode();
+  const [loading, setLoading] = React.useState(false);
+  const form = useForm<JoinRoomType>({
     resolver: zodResolver(joinRoomSchema),
     defaultValues: {
       code: "",
     },
   });
+
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async (values: JoinRoom) => await joinRoom(values, token),
-    onSuccess: () => {
+
+  React.useEffect(() => {
+    if (!socket) return;
+
+    function onSuccessJoinRoom() {
+      setLoading(false);
+      toast.success(`Join room successfully!`);
       queryClient.invalidateQueries({
         queryKey: ["room"],
       });
-    },
-  });
-
-  async function onSubmit(values: JoinRoom) {
-    const res = await mutation.mutateAsync(values);
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error(data.error);
-      return;
+      form.reset();
     }
-    toast("Entering the room, happy chatting!");
-    form.reset();
+
+    function onErrorJoinRoom(data: SocketResponseError) {
+      setLoading(false);
+      toast(data.error);
+    }
+
+    socket.on("successJoinRoom", onSuccessJoinRoom);
+    socket.on("errorJoinRoom", onErrorJoinRoom);
+
+    return () => {
+      socket.off("successJoinRoom");
+      socket.off("errorJoinRoom");
+    };
+  }, [socket, queryClient, router.history, setSettingMode, form]);
+
+  async function onSubmit(values: JoinRoomType) {
+    if (!socket) return;
+    setLoading(true);
+    socket.emit("joinRoom", {
+      code: values.code,
+    });
     setOpen(false);
   }
 
@@ -124,7 +148,7 @@ export default function JoinRoom({
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={form.formState.isSubmitting}
+                disabled={loading}
               >
                 Join
               </Button>

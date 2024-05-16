@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import * as z from "zod";
 import { loginSchema } from "@/lib/schema";
+import { useSettingMode } from "@/components/setting-mode-provider";
 
 export const Route = createFileRoute("/")({
   component: LoginPage,
@@ -39,6 +40,7 @@ function LoginPage() {
   const router = useRouter();
   const search = Route.useSearch();
   const auth = useAuth();
+  const { setSettingMode } = useSettingMode();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -52,6 +54,7 @@ function LoginPage() {
     const { username, password } = data;
     try {
       await auth.login(username, password);
+      setSettingMode(false);
       toast.success(`Logged in as ${data.username}`);
     } catch (err) {
       if (err instanceof Error) {

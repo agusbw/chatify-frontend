@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Textarea } from "../../ui/textarea";
-import { Message } from "@/lib/types";
+import { type Message } from "@/lib/types";
 import { toast } from "sonner";
-import { useRooms, useSocket } from "@/lib/hooks";
+import { useRooms } from "@/lib/hooks";
+import { useSocket } from "@/components/socket-provider";
 import { useAuth } from "../../auth-provider";
 import * as React from "react";
 import { Route } from "@/routes/_protected/_layout.chats";
@@ -43,6 +44,7 @@ function SendMessage({
             },
           ]);
     }
+
     function onErrorSendMessage({
       messageId,
       error,

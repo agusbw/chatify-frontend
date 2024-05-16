@@ -1,57 +1,9 @@
 import { fetcher } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { io } from "socket.io-client";
-import { Socket } from "socket.io-client";
-import { ClientToServerEvents, ServerToClientEvents } from "./types";
 import * as React from "react";
 import { roomDetailSchema, roomSchema, sendMessageSchema } from "./schema";
 import { z } from "zod";
 import { useAuth } from "@/components/auth-provider";
-
-export function useSocket() {
-  const { token } = useAuth();
-  const [socket, setSocket] = React.useState<Socket<
-    ServerToClientEvents,
-    ClientToServerEvents
-  > | null>(null);
-  const [isConnected, setIsConnected] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    if (token) {
-      const s = io(import.meta.env.VITE_SOCKET_URL as string, {
-        autoConnect: false,
-        extraHeaders: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      s.connect();
-      setSocket(s);
-    }
-  }, [token]);
-
-  React.useEffect(() => {
-    if (!socket) return;
-
-    function onConnect() {
-      setIsConnected(true);
-    }
-    function onDisconnect() {
-      setIsConnected(false);
-    }
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    return () => {
-      socket.disconnect();
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("errorSendMessage");
-    };
-  }, [socket]);
-
-  return { socket: socket, isConnected: isConnected };
-}
 
 export function useRoom(roomId: number | null) {
   const { token } = useAuth();

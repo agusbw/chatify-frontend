@@ -3,8 +3,9 @@ import { LogOut } from "lucide-react";
 import { useAuth } from "../auth-provider";
 import { Route } from "@/routes/_protected/_layout.chats";
 import * as React from "react";
-import { useRooms, useSocket } from "@/lib/hooks";
+import { useRooms } from "@/lib/hooks";
 import { cn, getInitialName } from "@/lib/utils";
+import { useSocket } from "../socket-provider";
 
 function Header() {
   const { user } = useAuth();
