@@ -32,7 +32,6 @@ function ChatsPage() {
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const { socket } = useSocket();
   const { settingMode, setSettingMode } = useSettingMode();
-  console.log(search.room);
 
   React.useEffect(() => {
     if (messagesQuery.status === "success") {
@@ -81,16 +80,6 @@ function ChatsPage() {
     settingMode,
   ]);
 
-  const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight -
-        chatContainerRef.current.clientHeight;
-    }
-  };
-
-  React.useLayoutEffect(scrollToBottom, [messages]);
-
   return (
     <div className="flex-grow overflow-y-auto flex flex-row">
       <RoomSection />
@@ -113,6 +102,7 @@ function ChatsPage() {
           <SendMessage
             messages={messages}
             handleMessagesChange={setMessages}
+            chatContainerRef={chatContainerRef}
           />
         </div>
       )}

@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function scrollToEndElement(ref: React.RefObject<HTMLDivElement>) {
+  if (ref.current) {
+    ref.current.scrollTop = ref.current.scrollHeight - ref.current.clientHeight;
+  }
+}
+
 export function getInitialName(name: string): string {
   const nameArr = name.trim().split(/\s+/);
   let initialName = "";
