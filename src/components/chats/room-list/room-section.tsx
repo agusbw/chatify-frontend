@@ -16,13 +16,20 @@ import CreateRoom from "./create-room";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useSettingMode } from "@/components/setting-mode-provider";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+type Room = {
+  id: number;
+  code: string;
+  name: string;
+  createdAt: Date;
+  creatorId: number;
+};
 
 function RoomSection() {
   const rooms = useRooms();
   const isMobile = useResponsive();
   const [isSidebarMobile, setIsSidebarMobile] = React.useState(isMobile);
-  const search = Route.useSearch();
-  const { setSettingMode } = useSettingMode();
 
   const width = isSidebarMobile
     ? "w-[70px] max-w-[70px]"
@@ -78,67 +85,105 @@ function RoomSection() {
         <div className="overflow-y-auto  flex-1 flex flex-col justify-between">
           {rooms.data &&
             rooms.data.map((room) => {
-              return (
-                <div
-                  className={cn(
-                    "flex items-center w-full px-4 py-3 border-b hover:bg-muted-foreground/10",
-                    isSidebarMobile ? "justify-center" : "",
-                    search.room === room.id ? "bg-muted-foreground/10" : ""
-                  )}
+              return isSidebarMobile ? (
+                <MobileRoomItem
+                  room={room}
                   key={room.id}
-                >
-                  <div
-                    className={cn(
-                      "border rounded-full p-4 flex items-center justify-center",
-                      isSidebarMobile ? "size-10" : "size-12"
-                    )}
-                  >
-                    {getInitialName(room.name)}
-                  </div>
-                  {!isSidebarMobile && (
-                    <div className="ml-4 flex justify-between w-full gap-x-4">
-                      <div className="max-w-full">
-                        <p className="font-medium text-sm truncate max-w-[140px]">
-                          {room.name}
-                        </p>
-                        <p
-                          className="text-xs font-medium text-muted-foreground w-fit cursor-copy"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigator.clipboard.writeText(room.code);
-                            toast("Room code copied to clipboard");
-                          }}
-                        >
-                          {room.code}
-                        </p>
-                      </div>
-                      <div className="flex gap-x-2 justify-end items-center flex-1">
-                        <Link
-                          to="/chats"
-                          search={{ room: room.id }}
-                          onClick={() => setSettingMode(false)}
-                        >
-                          <MessageCirclePlus
-                            size={20}
-                            className="text-muted-foreground hover:text-primary"
-                          />
-                        </Link>
-                        <Link
-                          to="/chats"
-                          search={{ room: room.id }}
-                          onClick={() => setSettingMode(true)}
-                        >
-                          <Settings
-                            size={20}
-                            className="text-muted-foreground hover:text-primary"
-                          />
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                />
+              ) : (
+                <RoomItem
+                  room={room}
+                  key={room.id}
+                />
               );
             })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileRoomItem({ room }: { room: Room }) {
+  const { settingMode, setSettingMode } = useSettingMode();
+  const search = Route.useSearch();
+  return (
+    <Link
+      className={cn(
+        "flex items-center justify-center w-full px-4 py-3 border-b hover:bg-muted-foreground/10",
+        search.room === room.id ? "bg-muted-foreground/10" : ""
+      )}
+      to="/chats"
+      search={{
+        room: room.id,
+      }}
+      onClick={() => {
+        if (settingMode) {
+          setSettingMode(false);
+        }
+      }}
+    >
+      <Avatar>
+        <AvatarFallback className="border rounded-full p-4 flex items-center justify-center">
+          {getInitialName(room.name)}
+        </AvatarFallback>
+      </Avatar>
+    </Link>
+  );
+}
+
+function RoomItem({ room }: { room: Room }) {
+  const search = Route.useSearch();
+  const { setSettingMode } = useSettingMode();
+
+  return (
+    <div
+      className={cn(
+        "flex items-center w-full px-4 py-3 border-b hover:bg-muted-foreground/10",
+        search.room === room.id ? "bg-muted-foreground/10" : ""
+      )}
+    >
+      <Avatar>
+        <AvatarFallback className="border  rounded-full p-4 flex items-center justify-center">
+          {getInitialName(room.name)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="ml-4 flex justify-between w-full gap-x-4">
+        <div className="max-w-full">
+          <p className="font-medium text-sm truncate max-w-[140px]">
+            {room.name}
+          </p>
+          <p
+            className="text-xs font-medium text-muted-foreground w-fit cursor-copy"
+            onClick={(e) => {
+              e.preventDefault();
+              navigator.clipboard.writeText(room.code);
+              toast("Room code copied to clipboard");
+            }}
+          >
+            {room.code}
+          </p>
+        </div>
+        <div className="flex gap-x-2 justify-end items-center flex-1">
+          <Link
+            to="/chats"
+            search={{ room: room.id }}
+            onClick={() => setSettingMode(false)}
+          >
+            <MessageCirclePlus
+              size={20}
+              className="text-muted-foreground hover:text-primary"
+            />
+          </Link>
+          <Link
+            to="/chats"
+            search={{ room: room.id }}
+            onClick={() => setSettingMode(true)}
+          >
+            <Settings
+              size={20}
+              className="text-muted-foreground hover:text-primary"
+            />
+          </Link>
         </div>
       </div>
     </div>
