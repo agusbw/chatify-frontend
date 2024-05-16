@@ -8,8 +8,9 @@ import { getInitialName } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
 import DeleteRoom from "./delete-room";
 import LeaveRoom from "./leave-room";
+import { toast } from "sonner";
 
-export default function Component() {
+export default function RoomSetting() {
   const { room: roomId } = Route.useSearch();
   const { user } = useAuth();
   const { data: room, isLoading } = useRoom(roomId);
@@ -34,7 +35,14 @@ export default function Component() {
           <div>
             <h2 className="text-2xl font-semibold">{room?.name}</h2>
             <div className="flex items-center space-x-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p
+                className="text-sm text-gray-500 dark:text-gray-400 cursor-copy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigator.clipboard.writeText(room ? room.code : "");
+                  toast("Room code copied to clipboard");
+                }}
+              >
                 Code:
                 <span className="font-mono"> {room?.code}</span>
               </p>
